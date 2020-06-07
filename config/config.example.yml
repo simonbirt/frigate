@@ -49,6 +49,15 @@ mqtt:
 #     - rgb24
 
 ####################
+# Global alias configuration
+# Aliasing can be used to rename labels used in the model. Multiple labels can be mapped to the same
+# alias. Once a label is aliased, the alias name should be used in the object configuration
+####################
+alias:
+  car: vehicle
+  truck: vehicle
+
+####################
 # Global object configuration. Applies to all cameras
 # unless overridden at the camera levels.
 # Keys must be valid labels. By default, the model uses coco (https://dl.google.com/coral/canned_models/coco_labels.txt).
@@ -56,17 +65,19 @@ mqtt:
 # min_area (optional): minimum width*height of the bounding box for the detected person
 # max_area (optional): maximum width*height of the bounding box for the detected person
 # threshold (optional): The minimum decimal percentage (50% hit = 0.5) for the confidence from tensorflow
+# tracking_threshold (optional): Once an object is acquired, allow a lower threshold for subsequent detections that
+# have a similar bounding box
 ####################
 objects:
   track:
     - person
-    - car
-    - truck
+    - vehicle
   filters:
     person:
       min_area: 5000
       max_area: 100000
-      threshold: 0.5
+      threshold: 0.8
+      tracking_threshold: 0.6
 
 cameras:
   back:
@@ -116,6 +127,13 @@ cameras:
     snapshots:
       show_timestamp: True
 
+    ################
+    # Camera level alias config. This config is merged with the global config above.
+    ################
+    alias:
+      dog: animal
+      cat: animal
+      
     ################
     # Camera level object config. This config is merged with the global config above.
     ################

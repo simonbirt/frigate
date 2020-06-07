@@ -9,18 +9,7 @@ import numpy as np
 from collections import Counter, defaultdict
 import itertools
 import pyarrow.plasma as plasma
-import matplotlib.pyplot as plt
 from frigate.util import draw_box_with_label, PlasmaManager
-from frigate.edgetpu import load_labels
-
-PATH_TO_LABELS = '/labelmap.txt'
-
-LABELS = load_labels(PATH_TO_LABELS)
-cmap = plt.cm.get_cmap('tab10', len(LABELS.keys()))
-
-COLOR_MAP = {}
-for key, val in LABELS.items():
-    COLOR_MAP[val] = tuple(int(round(255 * c)) for c in cmap(key)[:3])
 
 class TrackedObjectProcessor(threading.Thread):
     def __init__(self, config, client, topic_prefix, tracked_objects_queue):
@@ -67,8 +56,8 @@ class TrackedObjectProcessor(threading.Thread):
                 # draw the bounding boxes on the frame
                 for obj in tracked_objects.values():
                     thickness = 2
-                    color = COLOR_MAP[obj['label']]
-                    
+                    color = config['color_map'].get(obj['label'])
+
                     if obj['frame_time'] != frame_time:
                         thickness = 1
                         color = (255,0,0)

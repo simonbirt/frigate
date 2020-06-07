@@ -108,16 +108,16 @@ class EdgeTPUProcess():
         self.detect_process.start()
 
 class RemoteObjectDetector():
-    def __init__(self, name, labels, detection_queue):
+    def __init__(self, name, labels, aliases, detection_queue):
         self.labels = load_labels(labels)
         self.name = name
         self.fps = EventsPerSecond()
         self.plasma_client = plasma.connect("/tmp/plasma")
         self.detection_queue = detection_queue
+        self.aliases = aliases
     
     def detect(self, tensor_input, threshold=.4):
         detections = []
-
         now = f"{self.name}-{str(datetime.datetime.now().timestamp())}"
         object_id_frame = plasma.ObjectID(hashlib.sha1(str.encode(now)).digest())
         object_id_detections = plasma.ObjectID(hashlib.sha1(str.encode(f"out-{now}")).digest())
@@ -132,8 +132,9 @@ class RemoteObjectDetector():
         for d in raw_detections:
             if d[1] < threshold:
                 break
+            label = self.labels[int(d[0])]
             detections.append((
-                self.labels[int(d[0])],
+                self.aliases.get(label, label),
                 float(d[1]),
                 (d[2], d[3], d[4], d[5])
             ))

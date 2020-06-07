@@ -52,7 +52,7 @@ def get_ffmpeg_input(ffmpeg_input):
     frigate_vars = {k: v for k, v in os.environ.items() if k.startswith('FRIGATE_')}
     return ffmpeg_input.format(**frigate_vars)
 
-def filtered(obj, objects_to_track, object_filters, mask):
+def filtered(obj, objects_to_track, object_filters, mask, tracked_objects=[]):
     object_name = obj[0]
 
     if not object_name in objects_to_track:
@@ -72,9 +72,24 @@ def filtered(obj, objects_to_track, object_filters, mask):
             return True
 
         # if the score is lower than the threshold, skip
-        if obj_settings.get('threshold', 0) > obj[1]:
-            return True
-    
+        # establish if the object is coincident with an existing tracked object of the same label
+        # and if so, reduce the threshold in proportion to the overlap
+        configured_threshold = obj_settings.get('threshold', 0)
+        max_threshold_reduction = configured_threshold - obj_settings.get(
+            'tracking_threshold', configured_threshold)
+        if configured_threshold > 0:
+            calculated_threshold = configured_threshold
+            if max_threshold_reduction > 0:
+                for tracked_object in tracked_objects:
+                    if tracked_object['label'] == object_name:
+                        overlap_ratio = area(intersection(
+                            obj[2], tracked_object['box']))/area(tracked_object['box'])
+                        threshold_reduction = max_threshold_reduction * overlap_ratio
+                        calculated_threshold = min(
+                            calculated_threshold, configured_threshold - threshold_reduction)
+            if calculated_threshold > obj[1]:
+                return True
+
         # compute the coordinates of the object and make sure
         # the location isnt outside the bounds of the image (can happen from rounding)
         y_location = min(int(obj[2][3]), len(mask)-1)
@@ -198,7 +213,7 @@ def track_camera(name, config, global_objects_config, frame_queue, frame_shape, 
         mask[:] = 255
 
     motion_detector = MotionDetector(frame_shape, mask, resize_factor=6)
-    object_detector = RemoteObjectDetector(name, '/labelmap.txt', detection_queue)
+    object_detector = RemoteObjectDetector(name, '/labelmap.txt', config['alias'], detection_queue)
 
     object_tracker = ObjectTracker(10)
 
@@ -299,7 +314,8 @@ def track_camera(name, config, global_objects_config, frame_queue, frame_shape, 
                     (x_min, y_min, x_max, y_max),
                     (x_max-x_min)*(y_max-y_min),
                     region)
-                if filtered(det, objects_to_track, object_filters, mask):
+
+                if filtered(det, objects_to_track, object_filters, mask, tracked_objects):
                     continue
                 detections.append(det)
 

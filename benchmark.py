@@ -41,7 +41,7 @@ labels = load_labels('/labelmap.txt')
 # Separate process runner
 ######
 def start(id, num_detections, detection_queue):
-  object_detector = RemoteObjectDetector(str(id), '/labelmap.txt', detection_queue)
+  object_detector = RemoteObjectDetector(str(id), '/labelmap.txt', {}, detection_queue)
   start = datetime.datetime.now().timestamp()
 
   frame_times = []

@@ -14,11 +14,15 @@ import numpy as np
 import logging
 from flask import Flask, Response, make_response, jsonify, request
 import paho.mqtt.client as mqtt
+import matplotlib.pyplot as plt
 
 from frigate.video import track_camera, get_ffmpeg_input, get_frame_shape, CameraCapture, start_or_restart_ffmpeg
 from frigate.object_processing import TrackedObjectProcessor
 from frigate.util import EventsPerSecond
-from frigate.edgetpu import EdgeTPUProcess
+from frigate.edgetpu import EdgeTPUProcess, load_labels
+
+PATH_TO_LABELS = '/labelmap.txt'
+LABELS = load_labels(PATH_TO_LABELS)
 
 FRIGATE_VARS = {k: v for k, v in os.environ.items() if k.startswith('FRIGATE_')}
 
@@ -173,6 +177,17 @@ def main():
         config['snapshots'] = {
             'show_timestamp': config.get('snapshots', {}).get('show_timestamp', True)
         }
+        config['alias'] = {**CONFIG.get('alias', {}), **config.get('alias', {})}
+
+        aliased_labels = set()
+        for key, val in LABELS.items():
+            aliased_labels.add(config['alias'].get(val, val))
+        cmap = plt.cm.get_cmap('tab10', len(aliased_labels))
+        config['color_map'] = {}
+        for key, val in enumerate(aliased_labels):
+            config['color_map'][val] = tuple(int(round(255 * c)) for c in cmap(key)[:3])
+         
+
 
     # Queue for cameras to push tracked objects to
     tracked_objects_queue = mp.SimpleQueue()

@@ -6,9 +6,11 @@ import itertools
 import copy
 import numpy as np
 import multiprocessing as mp
-from collections import defaultdict
+from collections import defaultdict, deque
 from scipy.spatial import distance as dist
 from frigate.util import draw_box_with_label, calculate_region
+
+MAX_HISTORY = 200
 
 class ObjectTracker():
     def __init__(self, max_disappeared):
@@ -46,7 +48,7 @@ class ObjectTracker():
         if 'history' in obj:
             obj['history'].append(entry)
         else:
-            obj['history'] = [entry]
+            obj['history'] = deque([entry], MAX_HISTORY)
 
     def match_and_update(self, frame_time, new_objects):
         # group by name
